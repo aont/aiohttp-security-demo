@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aiohttp Security JWT Demo</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Aiohttp Security (JWT) Demo</h1>
+      <p class="subtitle">Log in as one of: alice/alice123, bob/bob123, carol/carol123</p>
+
+      <section class="card">
+        <h2>Login</h2>
+        <form id="login-form">
+          <label for="username">Username</label>
+          <input id="username" name="username" required />
+
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" required />
+
+          <button type="submit">Log In</button>
+        </form>
+      </section>
+
+      <section class="card actions">
+        <h2>Session</h2>
+        <div class="button-row">
+          <button id="check-session" type="button">Check Current User</button>
+          <button id="load-users" type="button">Load Users</button>
+          <button id="logout" type="button">Log Out</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Output</h2>
+        <pre id="output" aria-live="polite">Ready.</pre>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
