@@ -1,6 +1,7 @@
 import os
 import time
 import uuid
+import hmac
 from pathlib import Path
 
 import jwt
@@ -16,6 +17,7 @@ USERS = {
 JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-me")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_SECONDS = 60 * 30
+ALLOW_INSECURE_DEMO = os.getenv("ALLOW_INSECURE_DEMO", "false").lower() == "true"
 
 REVOKED_JTIS: set[str] = set()
 
@@ -41,6 +43,14 @@ def _decode_token(token: str) -> dict:
     return payload
 
 
+def _security_headers(response: web.StreamResponse) -> None:
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'"
+
+
 @web.middleware
 async def auth_middleware(request: web.Request, handler):
     if request.path.startswith("/api") and request.path not in {"/api/login"}:
@@ -51,22 +61,35 @@ async def auth_middleware(request: web.Request, handler):
         token = auth_header.split(" ", 1)[1]
         try:
             payload = _decode_token(token)
-        except jwt.PyJWTError as err:
-            return web.json_response({"error": str(err)}, status=401)
+        except jwt.PyJWTError:
+            return web.json_response({"error": "Invalid or expired token"}, status=401)
 
         request["user"] = payload["sub"]
         request["jti"] = payload["jti"]
 
-    return await handler(request)
+    response = await handler(request)
+    _security_headers(response)
+    return response
 
 
 async def login(request: web.Request) -> web.Response:
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"error": "Invalid JSON body"}, status=400)
+
+    if not isinstance(body, dict):
+        return web.json_response({"error": "Invalid JSON body"}, status=400)
+
     username = body.get("username", "").strip().lower()
     password = body.get("password", "")
 
+    if not isinstance(password, str):
+        return web.json_response({"error": "Invalid credentials"}, status=401)
+
     user = USERS.get(username)
-    if not user or user["password"] != password:
+    stored_password = user["password"] if user else ""
+    if not user or not hmac.compare_digest(stored_password, password):
         return web.json_response({"error": "Invalid credentials"}, status=401)
 
     token = _build_token(username)
@@ -99,7 +122,13 @@ async def index(request: web.Request) -> web.Response:
 
 
 def create_app() -> web.Application:
-    app = web.Application(middlewares=[auth_middleware])
+    if JWT_SECRET == "dev-secret-change-me" and not ALLOW_INSECURE_DEMO:
+        raise RuntimeError(
+            "Refusing to start with insecure default JWT_SECRET. "
+            "Set JWT_SECRET to a strong value or set ALLOW_INSECURE_DEMO=true for local demos."
+        )
+
+    app = web.Application(middlewares=[auth_middleware], client_max_size=16 * 1024)
     app.router.add_get("/", index)
     app.router.add_static("/static", path="static", show_index=False)
     app.router.add_post("/api/login", login)

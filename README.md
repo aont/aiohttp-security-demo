@@ -26,3 +26,10 @@ Then open: http://localhost:8080
 - `alice / alice123`
 - `bob / bob123`
 - `charlie / charlie123`
+
+
+## Security notes
+
+- Set a strong `JWT_SECRET` in production. The app now refuses to start with the insecure default unless `ALLOW_INSECURE_DEMO=true` is explicitly set.
+- JWTs are still bearer tokens returned in JSON for demo simplicity; in production consider secure HttpOnly cookies with CSRF protections.
+- This demo keeps users and revoked token IDs in memory only (no persistence, no horizontal scalability).
