@@ -22,9 +22,9 @@ JWT_COOKIE_NAME = "auth_token"
 
 # Demo in-memory users. In production, move this into a database.
 USERS = {
-    "alice": {"password": "alice123", "roles": {"user"}},
-    "bob": {"password": "bob123", "roles": {"user", "admin"}},
-    "carol": {"password": "carol123", "roles": {"user"}},
+    "alice": {"password": "alice123", "roles": {"user"}, "display_name": "Alice"},
+    "bob": {"password": "bob123", "roles": {"user", "admin"}, "display_name": "Bob"},
+    "carol": {"password": "carol123", "roles": {"user"}, "display_name": "Carol"},
 }
 
 
@@ -87,15 +87,32 @@ class DemoAuthorizationPolicy(AbstractAuthorizationPolicy):
         return permission in USERS[identity]["roles"]
 
 
+def _public_user(username: str) -> dict:
+    user = USERS[username]
+    return {
+        "username": username,
+        "displayName": user["display_name"],
+        "roles": sorted(user["roles"]),
+    }
+
+
 async def login(request: web.Request) -> web.Response:
     data = await request.json()
-    username = data.get("username", "")
-    password = data.get("password", "")
+    username = str(data.get("username", "")).strip()
+    password = str(data.get("password", ""))
+
+    if not username or not password:
+        return web.json_response({"error": "Username and password are required"}, status=400)
 
     if username not in USERS or USERS[username]["password"] != password:
         return web.json_response({"error": "Invalid credentials"}, status=401)
 
-    response = web.json_response({"message": "Login successful", "username": username})
+    response = web.json_response(
+        {
+            "message": "Login successful",
+            "user": _public_user(username),
+        }
+    )
     await remember(request, response, username)
     return response
 
@@ -111,13 +128,7 @@ async def me(request: web.Request) -> web.Response:
     if not user_id:
         return web.json_response({"error": "Unauthorized"}, status=401)
 
-    user_info = USERS[user_id]
-    return web.json_response(
-        {
-            "username": user_id,
-            "roles": sorted(user_info["roles"]),
-        }
-    )
+    return web.json_response(_public_user(user_id))
 
 
 async def users_list(request: web.Request) -> web.Response:
@@ -125,14 +136,11 @@ async def users_list(request: web.Request) -> web.Response:
     if not user_id:
         return web.json_response({"error": "Unauthorized"}, status=401)
 
-    return web.json_response(
-        {
-            "users": [
-                {"username": username, "roles": sorted(data["roles"])}
-                for username, data in USERS.items()
-            ]
-        }
-    )
+    return web.json_response({"users": [_public_user(username) for username in USERS]})
+
+
+async def demo_users(request: web.Request) -> web.Response:
+    return web.json_response({"users": [_public_user(username) for username in USERS]})
 
 
 async def create_app() -> web.Application:
@@ -148,6 +156,7 @@ async def create_app() -> web.Application:
     app.router.add_post("/api/logout", logout)
     app.router.add_get("/api/me", me)
     app.router.add_get("/api/users", users_list)
+    app.router.add_get("/api/demo-users", demo_users)
 
     frontend_dir = os.path.join(os.path.dirname(__file__), "..", "frontend")
 

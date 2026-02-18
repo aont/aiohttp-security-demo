@@ -14,7 +14,7 @@ body {
 }
 
 .container {
-  max-width: 760px;
+  max-width: 840px;
   margin: 2rem auto;
   padding: 0 1rem;
 }
@@ -30,6 +30,11 @@ body {
   border-radius: 10px;
   padding: 1rem;
   margin-bottom: 1rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
 }
 
 label {
@@ -57,6 +62,23 @@ button {
 
 button:hover {
   background: #111827;
+}
+
+button.ghost {
+  background: #eef2ff;
+  color: #1e3a8a;
+}
+
+button.ghost:hover {
+  background: #e0e7ff;
+}
+
+button.danger {
+  background: #991b1b;
+}
+
+button.danger:hover {
+  background: #7f1d1d;
 }
 
 .button-row {

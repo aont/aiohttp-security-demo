@@ -3,33 +3,36 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Aiohttp Security JWT Demo</title>
+    <title>Aiohttp Security JWT Multi-User Demo</title>
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
     <main class="container">
-      <h1>Aiohttp Security (JWT) Demo</h1>
-      <p class="subtitle">Log in as one of: alice/alice123, bob/bob123, carol/carol123</p>
+      <h1>Aiohttp Security (JWT) Multi-User Authentication Demo</h1>
+      <p class="subtitle">Log in/out with JWT cookies and quickly switch between multiple demo users.</p>
 
       <section class="card">
         <h2>Login</h2>
-        <form id="login-form">
+        <form id="login-form" class="form-grid">
           <label for="username">Username</label>
-          <input id="username" name="username" required />
+          <input id="username" name="username" required autocomplete="username" />
 
           <label for="password">Password</label>
-          <input id="password" name="password" type="password" required />
+          <input id="password" name="password" type="password" required autocomplete="current-password" />
 
           <button type="submit">Log In</button>
         </form>
+
+        <h3>Demo Users</h3>
+        <div id="demo-users" class="button-row"></div>
       </section>
 
       <section class="card actions">
-        <h2>Session</h2>
+        <h2>Session Actions</h2>
         <div class="button-row">
           <button id="check-session" type="button">Check Current User</button>
-          <button id="load-users" type="button">Load Users</button>
-          <button id="logout" type="button">Log Out</button>
+          <button id="load-users" type="button">Load User List</button>
+          <button id="logout" type="button" class="danger">Log Out</button>
         </div>
       </section>
 
