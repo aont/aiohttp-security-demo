@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>aiohttp JWT Auth Demo</title>
+    <style>
+      :root { font-family: Inter, Arial, sans-serif; }
+      body { margin: 0; background: #f5f7fb; }
+      .container { max-width: 760px; margin: 40px auto; background: white; border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,.08); padding: 24px; }
+      h1 { margin-top: 0; }
+      .row { display: flex; gap: 12px; margin-bottom: 12px; }
+      input { flex: 1; padding: 10px; border: 1px solid #d8deeb; border-radius: 8px; }
+      button { background: #2358e1; color: white; border: 0; padding: 10px 14px; border-radius: 8px; cursor: pointer; }
+      button.secondary { background: #6b7280; }
+      #status { margin: 16px 0; font-weight: 600; }
+      code { background: #f0f3fa; padding: 2px 6px; border-radius: 6px; }
+      .help { color: #334155; }
+      ul { color: #475569; }
+      pre { background: #0f172a; color: #f1f5f9; padding: 12px; border-radius: 8px; overflow-x: auto; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>aiohttp + JWT login/logout demo</h1>
+      <p class="help">Try users: <code>alice/alice123</code>, <code>bob/bob123</code>, <code>charlie/charlie123</code>.</p>
+
+      <div class="row">
+        <input id="username" placeholder="username" />
+        <input id="password" type="password" placeholder="password" />
+      </div>
+      <div class="row">
+        <button id="loginBtn">Log in</button>
+        <button id="meBtn" class="secondary">Get /api/me</button>
+        <button id="logoutBtn" class="secondary">Log out</button>
+      </div>
+
+      <div id="status">Not authenticated</div>
+      <pre id="output">{}
+</pre>
+
+      <h3>What this demonstrates</h3>
+      <ul>
+        <li>Multiple users can authenticate and get independent JWTs.</li>
+        <li>Protected endpoint (<code>/api/me</code>) requires Bearer token.</li>
+        <li>Logout revokes the current token JTI on the server.</li>
+      </ul>
+    </div>
+
+    <script src="/static/main.js"></script>
+  </body>
+</html>
