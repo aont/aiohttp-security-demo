@@ -32,4 +32,4 @@ Then open: http://localhost:8080
 
 - Set a strong `JWT_SECRET` in production. The app now refuses to start with the insecure default unless `ALLOW_INSECURE_DEMO=true` is explicitly set.
 - JWTs are still bearer tokens returned in JSON for demo simplicity; in production consider secure HttpOnly cookies with CSRF protections.
-- This demo keeps users and revoked token IDs in memory only (no persistence, no horizontal scalability).
+- This demo keeps users in memory only (no persistence). Revoked token IDs are persisted in a local SQLite database file (`REVOCATION_DB_PATH`, default: `revoked_tokens.db`).

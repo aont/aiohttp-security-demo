@@ -2,6 +2,7 @@ import os
 import time
 import uuid
 import hmac
+import sqlite3
 from pathlib import Path
 
 import jwt
@@ -18,8 +19,54 @@ JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-me")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_SECONDS = 60 * 30
 ALLOW_INSECURE_DEMO = os.getenv("ALLOW_INSECURE_DEMO", "false").lower() == "true"
+REVOCATION_DB_PATH = os.getenv("REVOCATION_DB_PATH", "revoked_tokens.db")
 
-REVOKED_JTIS: set[str] = set()
+
+class RevocationStore:
+    def __init__(self, db_path: str):
+        self.db_path = db_path
+        self._initialize()
+
+    def _initialize(self) -> None:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS revoked_tokens (
+                    jti TEXT PRIMARY KEY,
+                    revoked_at INTEGER NOT NULL,
+                    expires_at INTEGER NOT NULL
+                )
+                """
+            )
+            conn.commit()
+
+    def revoke(self, jti: str, expires_at: int) -> None:
+        revoked_at = int(time.time())
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO revoked_tokens (jti, revoked_at, expires_at)
+                VALUES (?, ?, ?)
+                """,
+                (jti, revoked_at, expires_at),
+            )
+            conn.commit()
+
+    def is_revoked(self, jti: str) -> bool:
+        with sqlite3.connect(self.db_path) as conn:
+            row = conn.execute(
+                "SELECT 1 FROM revoked_tokens WHERE jti = ?", (jti,)
+            ).fetchone()
+        return row is not None
+
+    def purge_expired(self) -> None:
+        now = int(time.time())
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("DELETE FROM revoked_tokens WHERE expires_at < ?", (now,))
+            conn.commit()
+
+
+REVOCATION_STORE = RevocationStore(REVOCATION_DB_PATH)
 
 
 
@@ -38,7 +85,7 @@ def _build_token(username: str) -> str:
 def _decode_token(token: str) -> dict:
     payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     jti = payload.get("jti")
-    if not jti or jti in REVOKED_JTIS:
+    if not jti or REVOCATION_STORE.is_revoked(jti):
         raise jwt.InvalidTokenError("Token has been revoked")
     return payload
 
@@ -66,6 +113,7 @@ async def auth_middleware(request: web.Request, handler):
 
         request["user"] = payload["sub"]
         request["jti"] = payload["jti"]
+        request["exp"] = payload["exp"]
 
     response = await handler(request)
     _security_headers(response)
@@ -105,7 +153,7 @@ async def login(request: web.Request) -> web.Response:
 
 
 async def logout(request: web.Request) -> web.Response:
-    REVOKED_JTIS.add(request["jti"])
+    REVOCATION_STORE.revoke(request["jti"], request["exp"])
     return web.json_response({"message": "Logged out successfully"})
 
 
@@ -127,6 +175,8 @@ def create_app() -> web.Application:
             "Refusing to start with insecure default JWT_SECRET. "
             "Set JWT_SECRET to a strong value or set ALLOW_INSECURE_DEMO=true for local demos."
         )
+
+    REVOCATION_STORE.purge_expired()
 
     app = web.Application(middlewares=[auth_middleware], client_max_size=16 * 1024)
     app.router.add_get("/", index)
